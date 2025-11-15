@@ -33,7 +33,7 @@ export function detectWindfall(transactions: Transaction[]) {
     const incomeValues = Object.values(monthlyIncomes);
     const medianIncome = incomeValues.sort((a, b) => a - b)[Math.floor(incomeValues.length / 2)] || 0;
 
-    // Find transactions in last 30 days that are > 1.5x median income
+    // Find transactions in last 30 days that are > 1.2x median income (lowered for demo)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -41,22 +41,26 @@ export function detectWindfall(transactions: Transaction[]) {
       const transactionDate = new Date(t.date);
       return (
         transactionDate >= thirtyDaysAgo &&
-        Math.abs(t.amount) > medianIncome * 1.5
+        Math.abs(t.amount) > medianIncome * 1.2
       );
     });
 
     if (windfall) {
-      const suggestedAmount = Math.abs(windfall.amount) * 0.2; // Suggest 20%
+      const windfallAmount = Math.abs(windfall.amount);
+      const suggestedAmount = Math.round(windfallAmount * 0.1); // Suggest 10%
 
       return {
         hasWindfall: true,
         suggestion: {
           type: 'windfall',
-          amount: Math.abs(windfall.amount),
-          suggestedSave: Math.round(suggestedAmount * 100) / 100,
-          merchantName: windfall.merchantName,
-          date: windfall.date,
-          message: `Great news! We detected a windfall of $${Math.abs(windfall.amount).toFixed(2)}. Save 20% before it gets mentally budgeted.`,
+          title: windfall.merchantName || 'Income deposit',
+          amount: suggestedAmount,
+          transaction: {
+            amount: windfallAmount,
+            merchantName: windfall.merchantName,
+            date: windfall.date,
+          },
+          message: `Great news! We detected a windfall of $${windfallAmount.toFixed(2)}. Save some before it gets mentally budgeted.`,
         },
       };
     }
