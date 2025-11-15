@@ -98,6 +98,7 @@ export function useIncreaseTransfer() {
     }) => increaseAPI.transfer(fromAccountId, toAccountId, amount, description),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['increase-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['increase-accounts'] });
       queryClient.invalidateQueries({ queryKey: ['increase-transactions'] });
     },
   });
