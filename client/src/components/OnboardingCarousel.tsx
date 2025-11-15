@@ -49,14 +49,22 @@ export default function OnboardingCarousel({ onSignUp, onLogin, onSkip }: Onboar
   const slide = slides[currentSlide];
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background relative">
+      <button
+        onClick={onSkip}
+        data-testid="button-skip"
+        className="absolute top-4 right-4 z-50 text-white/80 hover:text-white px-3 py-1.5 rounded-full text-sm font-medium transition-all"
+      >
+        Skip
+      </button>
+
       <div className="relative flex-1">
         <img
           src={slide.image}
           alt={slide.title}
           className="w-full h-full object-cover"
         />
-        
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
         {currentSlide > 0 && (
@@ -66,16 +74,6 @@ export default function OnboardingCarousel({ onSignUp, onLogin, onSkip }: Onboar
             className="absolute top-6 left-4 text-white hover-elevate p-2 rounded-full"
           >
             <ChevronLeft className="w-6 h-6" />
-          </button>
-        )}
-
-        {onSkip && (
-          <button
-            onClick={onSkip}
-            data-testid="button-skip"
-            className="absolute top-6 right-4 text-white hover-elevate px-4 py-2 rounded-full text-sm font-medium"
-          >
-            Skip
           </button>
         )}
 
