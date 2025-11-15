@@ -1,11 +1,58 @@
 import { Button } from "@/components/ui/button";
-import { Shield, Building2 } from "lucide-react";
+import { Shield, Building2, Loader2 } from "lucide-react";
+import { usePlaidLink } from "react-plaid-link";
+import { usePlaidLinkToken } from "@/hooks/useAPI";
+import { plaidAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface BankConnectionProps {
-  onConnect?: () => void;
+  onConnect?: (accessToken: string, itemId: string) => void;
+  onSkip?: () => void;
 }
 
-export default function BankConnection({ onConnect }: BankConnectionProps) {
+export default function BankConnection({ onConnect, onSkip }: BankConnectionProps) {
+  const { toast } = useToast();
+  const [userId] = useState(() => `user_${Date.now()}`);
+
+  // Get link token from backend
+  const { data: linkTokenData, isLoading: isLoadingToken } = usePlaidLinkToken(userId);
+
+  // Handle successful Plaid Link
+  const onSuccess = async (publicToken: string) => {
+    try {
+      // Exchange public token for access token
+      const result = await plaidAPI.exchangePublicToken(publicToken, userId);
+
+      toast({
+        title: "Bank connected!",
+        description: "Successfully connected your bank account.",
+      });
+
+      // Call parent callback with access token
+      onConnect?.(result.access_token, result.item_id);
+    } catch (error) {
+      console.error('Error exchanging token:', error);
+      toast({
+        title: "Connection failed",
+        description: "Could not connect your bank. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Initialize Plaid Link
+  const { open, ready } = usePlaidLink({
+    token: linkTokenData?.link_token || null,
+    onSuccess,
+  });
+
+  const handleConnect = () => {
+    if (ready) {
+      open();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="flex-1 p-6 flex flex-col justify-center">
@@ -28,11 +75,19 @@ export default function BankConnection({ onConnect }: BankConnectionProps) {
 
           <div className="space-y-4">
             <Button
-              onClick={onConnect}
+              onClick={handleConnect}
+              disabled={!ready || isLoadingToken}
               data-testid="button-connect-plaid"
               className="w-full rounded-full py-6 text-lg font-semibold"
             >
-              Connect with Plaid
+              {isLoadingToken ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                'Connect with Plaid'
+              )}
             </Button>
 
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-2 flex-wrap">
@@ -46,6 +101,7 @@ export default function BankConnection({ onConnect }: BankConnectionProps) {
             </p>
 
             <button
+              onClick={onSkip}
               data-testid="button-skip"
               className="text-sm text-muted-foreground underline mt-4"
             >

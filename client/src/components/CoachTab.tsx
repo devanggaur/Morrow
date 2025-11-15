@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Send } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
+import { useChatWithCoach } from "@/hooks/useAPI";
 
 const suggestions = [
   "How much can I save today?",
@@ -24,21 +25,41 @@ export default function CoachTab() {
     },
   ]);
   const [input, setInput] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const chatMutation = useChatWithCoach();
 
-    const newMessages: Message[] = [
-      ...messages,
-      { role: "user", content: input },
-      {
-        role: "assistant",
-        content: "That's a great question! In a real app, I'd use AI to analyze your spending patterns and give you personalized advice.",
-      },
-    ];
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
+  const handleSend = async () => {
+    if (!input.trim() || chatMutation.isPending) return;
+
+    const userMessage: Message = { role: "user", content: input };
+    const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput("");
+
+    try {
+      // Call the AI coach API
+      const response = await chatMutation.mutateAsync(newMessages);
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response.message },
+      ]);
+    } catch (error) {
+      console.error("Error chatting with coach:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "I'm having trouble connecting right now. Please try again in a moment.",
+        },
+      ]);
+    }
   };
 
   const handleSuggestion = (suggestion: string) => {
@@ -69,6 +90,16 @@ export default function CoachTab() {
           </div>
         ))}
 
+        {chatMutation.isPending && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-card">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+
         {messages.length <= 1 && (
           <div className="flex flex-wrap gap-2 mt-6">
             {suggestions.map((suggestion, i) => (
@@ -91,18 +122,24 @@ export default function CoachTab() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && !chatMutation.isPending && handleSend()}
             placeholder="Ask anything about your money…"
             className="flex-1 rounded-full py-6"
             data-testid="input-chat"
+            disabled={chatMutation.isPending}
           />
           <Button
             onClick={handleSend}
             size="icon"
             className="rounded-full h-12 w-12 flex-shrink-0"
             data-testid="button-send"
+            disabled={chatMutation.isPending || !input.trim()}
           >
-            <Send className="w-5 h-5" />
+            {chatMutation.isPending ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
           </Button>
         </div>
       </div>
