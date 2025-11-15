@@ -1,0 +1,355 @@
+Build a mobile-first React app called Morrow — an AI-powered personal finance and savings coach.
+
+The visual style should be warm, friendly, and inspired by Cleo:
+
+Soft beige backgrounds (#F5F0EB)
+
+Deep brown text (#3C2220)
+
+Warm orange accents (#FFB65C)
+
+Full-bleed hero images on onboarding
+
+Rounded cards, large typography, playful microcopy
+
+iPhone-friendly (390×844)
+
+The app should support:
+
+Full onboarding flow with cover images
+
+Bank connection (Plaid placeholder)
+
+Goal-based vaults with soft lock
+
+A full Smart Savings “Savings Lab” with multiple savings methods
+
+AI Coach chat
+
+Rewards & prize-linked savings
+
+Use clean, modular component structure so we can wire real APIs later.
+
+🟧 1. Onboarding Flow (Retain ALL earlier screens)
+Intro Carousel (3 screens) with full-bleed hero images
+
+Slide 1
+
+Title: “Build the future you want.”
+
+Subtitle: “Meet Morrow — your AI money coach that helps you save without thinking.”
+
+Hero image: warm, soft illustration of someone looking toward a sunrise.
+
+Slide 2
+
+Title: “Little steps. Big results.”
+
+Subtitle: “Smart sweeps, round-ups, challenges, and more — all tailored to your habits.”
+
+Hero image: cozy notebook + cup of coffee + progress bar elements.
+
+Slide 3
+
+Title: “Powered by real accounts.”
+
+Subtitle: “FDIC-insured vaults for every goal. Real savings, real progress.”
+
+Hero image: lock + savings jars + vault visual.
+
+Each slide includes:
+
+Sign Up (solid)
+
+Log In (outline)
+
+Money Goals Screen
+
+Title: “What are your money goals right now?”
+
+Checkable cards:
+
+Build a rainy-day fund
+
+Pay off debt faster
+
+Save for something fun
+
+Stop overspending
+
+Get smarter money coaching
+
+Sticky CTA: Next
+
+Personal Details Flow (Multi-step)
+
+Retain exactly like earlier:
+
+Step 1: Name
+Step 2: Email
+Step 3: Date of birth (18+ validation)
+Step 4: State of residence
+Step 5: “Where did you hear about Morrow?” (Press, Referral, App Store, Search, Social, Friends, Other)
+
+At the bottom of each screen:
+
+“Your data explained” (small soft link)
+
+Top of each screen:
+
+Progress bar (Cleo-style thin progress indicator)
+
+Email Verification Screen
+
+Title: “Enter your code”
+
+Subtitle: “We just emailed a 6-digit code to [email].”
+
+6 input boxes
+
+Link: “Send to a different email”
+
+Small text: “Didn’t get it? Tap to resend.”
+
+Button: Verify and continue
+
+Bank Connection Screen (Plaid Placeholder)
+
+Title: “Connect your bank”
+
+Subtitle: “Morrow analyzes your spending to personalize savings.”
+
+Illustration: simple bank + shield icon
+
+Button: Connect with Plaid
+
+Small text: “Secure • Read-only • Bank-level encryption”
+
+🟧 2. Home Tab — “Today with Morrow”
+
+Greeting: “Hi Devang,”
+
+Snapshot cards:
+
+Cash in checking
+
+Saved in vaults
+
+Primary dynamic card: “Your best move today”
+
+This card changes depending on savings triggers:
+
+Windfall
+
+Smart Sweep
+
+Subscription Sweep
+
+Round-ups
+
+Challenges
+
+Rules
+
+Mood-based nudges
+
+Save-to-spend
+
+Buttons:
+
+Do it
+
+Adjust amount
+
+Skip
+
+Two small pills at top:
+
+“Savings Lab”
+
+“Rewards”
+
+🟧 3. Vaults Tab — Goal Vaults + Soft Lock
+
+Exactly like before but renamed to Morrow:
+
+Vault List
+
++ New Vault button
+
+Cards show: name, progress bar, balance, soft-lock pill
+
+Vault Detail
+
+Name
+
+Big balance
+
+Target amount & progress
+
+Soft-lock explanation
+
+CTA: Add money, Withdraw
+
+Withdraw Bottom Sheet
+
+“Wait… this slows your goal.”
+
+“Withdrawing $250 adds 3 weeks to your finish date.”
+
+Textbox (optional reason)
+
+Buttons: Keep saving / Still withdraw
+
+🟧 4. Smart Savings Tab — “Savings Lab” (All savings modes)
+
+This includes everything you built on the backend.
+
+Cards in this tab:
+4.1 Windfall Wallet
+
+Detects large deposits
+
+Slider for % to save
+
+Toggle on/off
+
+Example: “Tax refund hit: $1,800 → save $360?”
+
+4.2 Smart Sweep
+
+Weekly underspend detection
+
+Frequency selector
+
+% slider
+
+Example: “You spent $80 less. Save $40?”
+
+4.3 Subscription Sweep
+
+Detects cancel/downgrade opportunities
+
+Example: “Skip Gym+? Move $18 to your goal monthly.”
+
+4.4 Round-ups
+
+Toggle
+
+Round to $1/$2/$5
+
+Show accumulated bucket
+
+4.5 Micro-Savings Challenges
+
+“No-Takeout Weekend”
+
+“Coffee Swap”
+
+“Zero-Spend Day”
+
+Button: Browse challenges
+
+4.6 Rules / Automations (IFTTT)
+
+IF [category] THEN save [amount/%] TO [vault]
+
+Button: Create rule
+
+4.7 Emotion-based Nudges
+
+Weekly mood check
+
+Example state: “Feeling stressed? Move $10 to Peace of Mind.”
+
+4.8 Save-to-Spend Loop
+
+Unlock guilt-free fun money
+
+Slider: % fun money
+
+Show unlocked balance
+
+4.9 Fun Money Lottery (Prize-linked savings)
+
+Show entries earned from savings actions
+
+Draw day: Sunday
+
+Button: How it works
+
+All cards must follow a consistent structure:
+
+Title
+
+Short description
+
+Example state
+
+Toggles/controls as needed
+
+Buttons for action
+
+🟧 5. Challenges Screen
+
+Title: “Challenges”
+
+List of challenge cards with images/icons
+
+Show progress, streaks
+
+Button: Start challenge
+
+🟧 6. Rewards Tab (Prize + Fun Wallet)
+
+This one combines:
+
+Prize-linked savings entries
+
+Guilt-free fun money balance
+
+Activity feed
+
+Sections:
+
+Top: Rewards Balance
+Fun Money Lottery
+Save-to-Spend Wallet
+Activity Feed:
+
+“Saved $40 → earned 2 entries”
+
+“Completed challenge → unlocked $5 fun wallet credit”
+
+🟧 7. Coach Tab — AI Chat
+
+Same as previous, but mention Morrow:
+
+Title: “Ask Morrow”
+
+Suggestions:
+
+How much can I save today?
+
+Which savings methods fit me?
+
+Help me create a rule.
+
+What changed in my spending?
+
+Chat bubbles left and right
+Input placeholder: “Ask anything about your money…”
+
+🟧 8. General App Principles
+
+Cleo-style warmth and friendliness
+
+Full-bleed cover images on onboarding
+
+Rounded cards
+
+Plenty of whitespace
+
+Mobile-first layout
+
+Modular components for each savings method

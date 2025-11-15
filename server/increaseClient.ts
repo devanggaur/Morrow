@@ -1,0 +1,215 @@
+import axios from 'axios';
+
+const increaseApi = axios.create({
+  baseURL: process.env.INCREASE_API_URL,
+  headers: {
+    'Authorization': `Bearer ${process.env.INCREASE_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+});
+
+export async function createEntity(data: {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+  };
+  ssn?: string; // Full SSN for sandbox (e.g., "123456789")
+  ssnLast4?: string; // For production
+}) {
+  try {
+    const response = await increaseApi.post('/entities', {
+      structure: 'natural_person',
+      natural_person: {
+        name: `${data.firstName} ${data.lastName}`,
+        date_of_birth: data.dateOfBirth,
+        address: {
+          line1: data.address.street,
+          city: data.address.city,
+          state: data.address.state,
+          zip: data.address.postalCode,
+        },
+        identification: {
+          method: 'social_security_number',
+          // For sandbox, use full SSN if provided, otherwise generate a test one
+          number: data.ssn || '123456789',
+        },
+      },
+    });
+
+    return {
+      success: true,
+      entity_id: response.data.id,
+      data: response.data,
+    };
+  } catch (error: any) {
+    console.error('Error creating entity:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+    };
+  }
+}
+
+export async function getEntity(entityId: string) {
+  try {
+    const response = await increaseApi.get(`/entities/${entityId}`);
+
+    return {
+      success: true,
+      entity: response.data,
+    };
+  } catch (error: any) {
+    console.error('Error getting entity:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+    };
+  }
+}
+
+export async function createAccount(entityId: string, name: string) {
+  try {
+    const response = await increaseApi.post('/accounts', {
+      entity_id: entityId,
+      name: name,
+      program_id: 'program_id', // You may need to update this with your actual program ID
+    });
+
+    return {
+      success: true,
+      account_id: response.data.id,
+      data: response.data,
+    };
+  } catch (error: any) {
+    console.error('Error creating account:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+    };
+  }
+}
+
+export async function getAccount(accountId: string) {
+  try {
+    const response = await increaseApi.get(`/accounts/${accountId}`);
+
+    return {
+      success: true,
+      account: response.data,
+    };
+  } catch (error: any) {
+    console.error('Error getting account:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+    };
+  }
+}
+
+export async function getAccountBalance(accountId: string) {
+  try {
+    const response = await increaseApi.get(`/accounts/${accountId}`);
+
+    return {
+      success: true,
+      account_id: accountId,
+      current_balance: response.data.balance / 100, // Convert from cents to dollars
+      currency: response.data.currency,
+    };
+  } catch (error: any) {
+    console.error('Error getting account balance:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+    };
+  }
+}
+
+export async function createTransfer(
+  fromAccountId: string,
+  toAccountId: string,
+  amount: number,
+  description: string
+) {
+  try {
+    // Convert dollars to cents
+    const amountInCents = Math.round(amount * 100);
+
+    const response = await increaseApi.post('/account_transfers', {
+      account_id: fromAccountId,
+      destination_account_id: toAccountId,
+      amount: amountInCents,
+      description: description,
+    });
+
+    return {
+      success: true,
+      transaction_id: response.data.id,
+      data: response.data,
+    };
+  } catch (error: any) {
+    console.error('Error creating transfer:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+    };
+  }
+}
+
+export async function getAccountTransfers(accountId: string, limit: number = 50) {
+  try {
+    const response = await increaseApi.get('/account_transfers', {
+      params: {
+        account_id: accountId,
+        limit: limit,
+      },
+    });
+
+    return {
+      success: true,
+      transactions: response.data.data.map((transfer: any) => ({
+        transaction_id: transfer.id,
+        amount: transfer.amount / 100, // Convert from cents to dollars
+        description: transfer.description,
+        status: transfer.status,
+        created_at: transfer.created_at,
+      })),
+    };
+  } catch (error: any) {
+    console.error('Error getting account transfers:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+    };
+  }
+}
+
+export async function simulateInboundACH(accountId: string, amount: number, description: string) {
+  try {
+    // This is for sandbox testing only
+    const amountInCents = Math.round(amount * 100);
+
+    const response = await increaseApi.post('/simulations/inbound_ach_transfers', {
+      account_number_id: accountId,
+      amount: amountInCents,
+      description: description,
+    });
+
+    return {
+      success: true,
+      transaction_id: response.data.id,
+      data: response.data,
+    };
+  } catch (error: any) {
+    console.error('Error simulating ACH:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+    };
+  }
+}
