@@ -26,9 +26,10 @@ const slides = [
 interface OnboardingCarouselProps {
   onSignUp?: () => void;
   onLogin?: () => void;
+  onSkip?: () => void;
 }
 
-export default function OnboardingCarousel({ onSignUp, onLogin }: OnboardingCarouselProps) {
+export default function OnboardingCarousel({ onSignUp, onLogin, onSkip }: OnboardingCarouselProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -65,6 +66,16 @@ export default function OnboardingCarousel({ onSignUp, onLogin }: OnboardingCaro
             className="absolute top-6 left-4 text-white hover-elevate p-2 rounded-full"
           >
             <ChevronLeft className="w-6 h-6" />
+          </button>
+        )}
+
+        {onSkip && (
+          <button
+            onClick={onSkip}
+            data-testid="button-skip"
+            className="absolute top-6 right-4 text-white hover-elevate px-4 py-2 rounded-full text-sm font-medium"
+          >
+            Skip
           </button>
         )}
 

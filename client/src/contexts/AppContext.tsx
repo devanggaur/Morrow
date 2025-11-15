@@ -22,10 +22,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.getItem('plaid_item_id')
   );
   const [increaseEntityId, setIncreaseEntityId] = useState<string | null>(
-    localStorage.getItem('increase_entity_id')
+    localStorage.getItem('increase_entity_id') || 'sandbox_entity_mypgdnyciycaoev7jpro'
   );
   const [increaseMainAccountId, setIncreaseMainAccountId] = useState<string | null>(
-    localStorage.getItem('increase_main_account_id')
+    localStorage.getItem('increase_main_account_id') || 'sandbox_account_argnws7gwjqbhnfkmrbb'
   );
   const [userId] = useState(() => {
     const stored = localStorage.getItem('user_id');

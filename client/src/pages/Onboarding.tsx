@@ -33,18 +33,23 @@ export default function Onboarding() {
     setLocation("/home");
   };
 
+  const handleSkipToBank = () => {
+    setStep(4);
+  };
+
   return (
     <>
       {step === 0 && (
         <OnboardingCarousel
           onSignUp={() => handleCarouselComplete("signup")}
           onLogin={() => handleCarouselComplete("login")}
+          onSkip={handleSkipToBank}
         />
       )}
       {step === 1 && <MoneyGoalsScreen onNext={handleGoalsComplete} />}
       {step === 2 && <PersonalDetailsFlow onComplete={handleDetailsComplete} />}
       {step === 3 && <EmailVerification email={email} onVerify={handleVerificationComplete} />}
-      {step === 4 && <BankConnection onConnect={handleBankConnectionComplete} />}
+      {step === 4 && <BankConnection onConnect={handleBankConnectionComplete} onSkip={() => setLocation("/home")} />}
     </>
   );
 }
