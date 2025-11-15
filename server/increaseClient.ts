@@ -198,17 +198,45 @@ export async function getAccountsByEntity(entityId: string) {
       },
     });
 
+    // Fetch balances by calculating from transactions for each account
+    const accountsWithBalances = await Promise.all(
+      response.data.data.map(async (account: any) => {
+        let calculatedBalance = 0;
+
+        // If balance is null, calculate from transactions
+        if (account.balance === null) {
+          try {
+            const txResponse = await increaseApi.get('/transactions', {
+              params: {
+                account_id: account.id,
+                limit: 100,
+              },
+            });
+
+            // Sum up all transaction amounts
+            calculatedBalance = txResponse.data.data.reduce((sum: number, tx: any) => {
+              return sum + (tx.amount || 0);
+            }, 0);
+          } catch (txError) {
+            console.warn(`Could not fetch transactions for account ${account.id}:`, txError);
+          }
+        }
+
+        return {
+          account_id: account.id,
+          entity_id: account.entity_id,
+          name: account.name,
+          status: account.status,
+          current_balance: account.balance !== null ? account.balance / 100 : calculatedBalance / 100,
+          currency: account.currency,
+          created_at: account.created_at,
+        };
+      })
+    );
+
     return {
       success: true,
-      accounts: response.data.data.map((account: any) => ({
-        account_id: account.id,
-        entity_id: account.entity_id,
-        name: account.name,
-        status: account.status,
-        current_balance: account.balance / 100, // Convert from cents to dollars
-        currency: account.currency,
-        created_at: account.created_at,
-      })),
+      accounts: accountsWithBalances,
     };
   } catch (error: any) {
     console.error('Error getting accounts by entity:', error.response?.data || error.message);
