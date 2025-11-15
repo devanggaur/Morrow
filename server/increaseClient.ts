@@ -77,7 +77,7 @@ export async function createAccount(entityId: string, name: string) {
     const response = await increaseApi.post('/accounts', {
       entity_id: entityId,
       name: name,
-      program_id: 'program_id', // You may need to update this with your actual program ID
+      program_id: 'sandbox_program_y9gxnikfjgcujxhk1bdk',
     });
 
     return {
