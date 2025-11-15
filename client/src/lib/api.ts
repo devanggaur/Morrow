@@ -220,6 +220,13 @@ export const savingsAPI = {
     });
   },
 
+  analyzeRoundups: async (transactions: any[]) => {
+    return fetchAPI<{ hasRoundups: boolean; suggestion: any }>('/savings/roundups/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ transactions }),
+    });
+  },
+
   checkFreshStart: async (userId: string = 'default_user') => {
     return fetchAPI<{ success: boolean; freshStart: any }>(
       `/savings/fresh-start/check?userId=${userId}`

@@ -433,6 +433,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Analyze Round-ups
+  app.post("/api/savings/roundups/analyze", async (req, res) => {
+    try {
+      const { transactions } = req.body;
+      const result = savingsAgent.analyzeRoundups(transactions);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Run Triple Play Analysis
   app.post("/api/savings/analyze", async (req, res) => {
     try {

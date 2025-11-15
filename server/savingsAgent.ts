@@ -113,20 +113,23 @@ export function analyzeWeeklySweep(transactions: Transaction[]) {
 
     const weeklyAverage = last4WeeksSpending / 4;
 
-    // Check if there's unspent budget
+    // Check if there's unspent budget (lowered threshold for demo)
     const unspentBudget = weeklyAverage - thisWeekSpending;
 
-    if (unspentBudget > 5) {
-      const suggestedAmount = unspentBudget * 0.5; // Suggest 50%
+    if (unspentBudget > 1) {
+      const suggestedAmount = Math.round(unspentBudget * 0.5); // Suggest 50%
 
       return {
         hasSweep: true,
         suggestion: {
           type: 'sweep',
-          weeklyAverage: Math.round(weeklyAverage * 100) / 100,
-          thisWeekSpending: Math.round(thisWeekSpending * 100) / 100,
-          unspentBudget: Math.round(unspentBudget * 100) / 100,
-          suggestedSave: Math.round(suggestedAmount * 100) / 100,
+          title: 'Under budget this week',
+          amount: suggestedAmount,
+          transaction: {
+            amount: Math.round(unspentBudget * 100) / 100,
+            weeklyAverage: Math.round(weeklyAverage * 100) / 100,
+            thisWeekSpending: Math.round(thisWeekSpending * 100) / 100,
+          },
           message: `You're $${unspentBudget.toFixed(2)} under your weekly average. Save half of it?`,
         },
       };
@@ -140,6 +143,63 @@ export function analyzeWeeklySweep(transactions: Transaction[]) {
     console.error('Error analyzing sweep:', error);
     return {
       hasSweep: false,
+      suggestion: null,
+    };
+  }
+}
+
+// Round-ups - Calculate spare change from purchases
+export function analyzeRoundups(transactions: Transaction[]) {
+  try {
+    // Get purchase transactions from last 30 days (positive amounts = spending)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const recentPurchases = transactions.filter((t) => {
+      const tDate = new Date(t.date);
+      return t.amount > 0 && tDate >= thirtyDaysAgo;
+    });
+
+    if (recentPurchases.length === 0) {
+      return {
+        hasRoundups: false,
+        suggestion: null,
+      };
+    }
+
+    // Calculate total round-ups
+    let totalRoundups = 0;
+    recentPurchases.forEach((t) => {
+      const cents = Math.round((t.amount % 1) * 100);
+      const roundup = cents > 0 ? (100 - cents) / 100 : 0;
+      totalRoundups += roundup;
+    });
+
+    if (totalRoundups > 1) {
+      return {
+        hasRoundups: true,
+        suggestion: {
+          type: 'roundup',
+          title: 'Spare change savings',
+          amount: Math.round(totalRoundups * 100) / 100,
+          transaction: {
+            amount: Math.round(totalRoundups * 100) / 100,
+            transactionCount: recentPurchases.length,
+            averageRoundup: Math.round((totalRoundups / recentPurchases.length) * 100) / 100,
+          },
+          message: `Round up ${recentPurchases.length} purchases to save $${totalRoundups.toFixed(2)}`,
+        },
+      };
+    }
+
+    return {
+      hasRoundups: false,
+      suggestion: null,
+    };
+  } catch (error) {
+    console.error('Error analyzing roundups:', error);
+    return {
+      hasRoundups: false,
       suggestion: null,
     };
   }
