@@ -110,13 +110,15 @@ export default function HomeTab() {
 
   // Detect all savings opportunities when transactions are loaded
   useEffect(() => {
-    if (transactionsData?.transactions) {
+    if (transactionsData?.transactions || import.meta.env.DEV) {
       setIsLoadingOpportunities(true);
 
+      const transactions = transactionsData?.transactions || [];
+
       Promise.all([
-        savingsAPI.detectWindfall(transactionsData.transactions),
-        savingsAPI.analyzeSweep(transactionsData.transactions),
-        savingsAPI.analyzeRoundups(transactionsData.transactions),
+        savingsAPI.detectWindfall(transactions),
+        savingsAPI.analyzeSweep(transactions),
+        savingsAPI.analyzeRoundups(transactions),
       ])
         .then(([windfallResult, sweepResult, roundupResult]) => {
           // Windfall
