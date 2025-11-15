@@ -11,6 +11,7 @@ import {
   usePlaidTransactions,
   useIncreaseAccounts,
   useIncreaseBalance,
+  useIncreaseTransfer,
 } from "@/hooks/useAPI";
 import { savingsAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -19,10 +20,12 @@ export default function HomeTab() {
   const [saveAmount, setSaveAmount] = useState([180]);
   const [windfallData, setWindfallData] = useState<any>(null);
   const [isLoadingWindfall, setIsLoadingWindfall] = useState(false);
+  const [windfallClaimed, setWindfallClaimed] = useState(false);
 
   const { toast } = useToast();
   const { plaidAccessToken, increaseEntityId, increaseMainAccountId } =
     useAppContext();
+  const transferMutation = useIncreaseTransfer();
 
   // Fetch Plaid accounts
   const { data: plaidAccountsData } = usePlaidAccounts(plaidAccessToken);
@@ -58,6 +61,42 @@ export default function HomeTab() {
     ) || 0;
 
   const vaultCount = increaseAccountsData?.accounts?.length || 0;
+
+  // Handler for "Do it" button - transfer windfall savings to first vault
+  const handleClaimWindfall = async () => {
+    const firstVault = increaseAccountsData?.accounts?.[0];
+
+    if (!firstVault || !increaseMainAccountId || saveAmount[0] <= 0) {
+      toast({
+        title: "Cannot transfer",
+        description: "Please create a vault first or adjust the amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await transferMutation.mutateAsync({
+        fromAccountId: increaseMainAccountId,
+        toAccountId: firstVault.account_id,
+        amount: saveAmount[0],
+        description: `Windfall savings - ${windfallData?.suggestion?.title || 'Income'}`,
+      });
+
+      setWindfallClaimed(true);
+
+      toast({
+        title: "Savings transferred!",
+        description: `$${saveAmount[0]} moved to ${firstVault.name}. Great job!`,
+      });
+    } catch (error) {
+      toast({
+        title: "Transfer failed",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Detect windfall when transactions are loaded
   useEffect(() => {
@@ -142,7 +181,7 @@ export default function HomeTab() {
           </Link>
         </div>
 
-        {windfallData?.hasWindfall && (
+        {windfallData?.hasWindfall && !windfallClaimed && (
           <Card className="p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -198,14 +237,17 @@ export default function HomeTab() {
               <Button
                 data-testid="button-do-it"
                 className="flex-1 rounded-full font-semibold"
-                onClick={() => {
-                  toast({
-                    title: "Savings scheduled!",
-                    description: `$${saveAmount[0]} will be transferred to your vault.`,
-                  });
-                }}
+                onClick={handleClaimWindfall}
+                disabled={transferMutation.isPending || saveAmount[0] <= 0}
               >
-                Do it
+                {transferMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Transferring...
+                  </>
+                ) : (
+                  "Do it"
+                )}
               </Button>
               <Button
                 data-testid="button-adjust"
@@ -222,6 +264,25 @@ export default function HomeTab() {
               >
                 Skip
               </Button>
+            </div>
+          </Card>
+        )}
+
+        {windfallClaimed && (
+          <Card className="p-6 mb-6 bg-primary/5">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold mb-1">Move claimed!</h2>
+                <Badge variant="default" className="text-xs mb-3">
+                  Savings transferred
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                  You saved ${saveAmount[0]} from your windfall. Keep up the great work!
+                </p>
+              </div>
             </div>
           </Card>
         )}
