@@ -15,6 +15,7 @@ interface SavingsMethodCardProps {
   hasButton?: boolean;
   buttonText?: string;
   badge?: string;
+  defaultEnabled?: boolean;
 }
 
 export default function SavingsMethodCard({
@@ -27,8 +28,9 @@ export default function SavingsMethodCard({
   hasButton = false,
   buttonText = "Set up",
   badge,
+  defaultEnabled = false,
 }: SavingsMethodCardProps) {
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(defaultEnabled);
   const [sliderValue, setSliderValue] = useState([20]);
 
   return (

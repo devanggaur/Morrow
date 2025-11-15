@@ -85,6 +85,7 @@ export default function SavingsLabTab() {
             example={windfallExample}
             hasToggle={true}
             hasSlider={true}
+            defaultEnabled={true}
             badge={
               savingsAnalysis?.windfall?.hasWindfall ? "Opportunity!" : "Popular"
             }
@@ -97,6 +98,7 @@ export default function SavingsLabTab() {
             example={sweepExample}
             hasToggle={true}
             hasSlider={true}
+            defaultEnabled={true}
             badge={savingsAnalysis?.sweep?.hasSweep ? "Opportunity!" : undefined}
           />
 
@@ -117,6 +119,7 @@ export default function SavingsLabTab() {
             hasToggle={true}
             hasButton={true}
             buttonText="Configure"
+            defaultEnabled={true}
           />
 
           <SavingsMethodCard
