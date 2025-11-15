@@ -69,6 +69,25 @@ export default function HomeTab() {
           if (data.hasWindfall && data.suggestion) {
             setWindfallData(data);
             setSaveAmount([data.suggestion.amount]);
+          } else {
+            // Demo mode: Show sample windfall if none detected in development
+            if (import.meta.env.DEV) {
+              setWindfallData({
+                hasWindfall: true,
+                suggestion: {
+                  type: 'windfall',
+                  title: 'Tax refund hit',
+                  amount: 180,
+                  transaction: {
+                    amount: 1800,
+                    merchantName: 'US Treasury',
+                    date: new Date().toISOString().split('T')[0],
+                  },
+                  message: 'Great news! We detected a windfall. Save some before it gets mentally budgeted.',
+                },
+              });
+              setSaveAmount([180]);
+            }
           }
         })
         .catch((error) => {
