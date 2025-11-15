@@ -43,6 +43,14 @@ export function useCreateIncreaseEntity() {
   });
 }
 
+export function useIncreaseAccounts(entityId: string | null) {
+  return useQuery({
+    queryKey: ['increase-accounts', entityId],
+    queryFn: () => increaseAPI.getAccounts(entityId!),
+    enabled: !!entityId,
+  });
+}
+
 export function useCreateIncreaseVault() {
   const queryClient = useQueryClient();
 

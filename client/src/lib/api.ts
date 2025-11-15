@@ -103,6 +103,10 @@ export const increaseAPI = {
     return fetchAPI<{ success: boolean; entity: any }>(`/increase/entity/${entityId}`);
   },
 
+  getAccounts: async (entityId: string) => {
+    return fetchAPI<{ success: boolean; accounts: any[] }>(`/increase/accounts/${entityId}`);
+  },
+
   createAccount: async (entityId: string, name: string) => {
     return fetchAPI<{ success: boolean; account_id: string; data: any }>('/increase/account', {
       method: 'POST',

@@ -3,10 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, Lock, Plus, ArrowDownToLine } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ChevronLeft, Lock, Plus, ArrowDownToLine, Loader2 } from "lucide-react";
 import WithdrawBottomSheet from "./WithdrawBottomSheet";
+import { useAppContext } from "@/contexts/AppContext";
+import { useIncreaseTransfer, useIncreaseBalance } from "@/hooks/useAPI";
+import { useToast } from "@/hooks/use-toast";
 
 interface VaultDetailProps {
+  accountId: string;
   name: string;
   balance: number;
   target: number;
@@ -14,10 +27,46 @@ interface VaultDetailProps {
   onBack?: () => void;
 }
 
-export default function VaultDetail({ name, balance, target, locked, onBack }: VaultDetailProps) {
+export default function VaultDetail({ accountId, name, balance, target, locked, onBack }: VaultDetailProps) {
   const [showWithdraw, setShowWithdraw] = useState(false);
-  const progress = (balance / target) * 100;
-  const weeksRemaining = Math.ceil((target - balance) / 50);
+  const [showAddMoney, setShowAddMoney] = useState(false);
+  const [amount, setAmount] = useState("");
+
+  const { toast } = useToast();
+  const { increaseMainAccountId } = useAppContext();
+  const transferMutation = useIncreaseTransfer();
+  const { data: balanceData } = useIncreaseBalance(accountId);
+
+  const currentBalance = balanceData?.current_balance ?? balance;
+  const progress = (currentBalance / target) * 100;
+  const weeksRemaining = Math.ceil((target - currentBalance) / 50);
+
+  const handleAddMoney = async () => {
+    if (!amount || !increaseMainAccountId) return;
+
+    try {
+      await transferMutation.mutateAsync({
+        fromAccountId: increaseMainAccountId,
+        toAccountId: accountId,
+        amount: parseFloat(amount),
+        description: `Transfer to ${name}`,
+      });
+
+      toast({
+        title: "Money added!",
+        description: `Successfully transferred $${amount} to ${name}.`,
+      });
+
+      setShowAddMoney(false);
+      setAmount("");
+    } catch (error) {
+      toast({
+        title: "Transfer failed",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <>
@@ -45,7 +94,7 @@ export default function VaultDetail({ name, balance, target, locked, onBack }: V
 
             <div className="text-center py-8">
               <p className="text-5xl font-bold text-primary mb-2">
-                ${balance.toLocaleString()}
+                ${currentBalance.toLocaleString()}
               </p>
               <p className="text-muted-foreground">
                 of ${target.toLocaleString()} goal
@@ -82,6 +131,7 @@ export default function VaultDetail({ name, balance, target, locked, onBack }: V
             <Button
               data-testid="button-add-money"
               className="rounded-full py-6 gap-2"
+              onClick={() => setShowAddMoney(true)}
             >
               <Plus className="w-5 h-5" />
               Add money
@@ -99,11 +149,59 @@ export default function VaultDetail({ name, balance, target, locked, onBack }: V
         </div>
       </div>
 
+      <Dialog open={showAddMoney} onOpenChange={setShowAddMoney}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add money to {name}</DialogTitle>
+            <DialogDescription>
+              Transfer money from your main account to this vault.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setShowAddMoney(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleAddMoney}
+              disabled={!amount || transferMutation.isPending || !increaseMainAccountId}
+            >
+              {transferMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Transferring...
+                </>
+              ) : (
+                "Transfer"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <WithdrawBottomSheet
         open={showWithdraw}
         onOpenChange={setShowWithdraw}
         vaultName={name}
-        currentBalance={balance}
+        currentBalance={currentBalance}
         weeksDelay={3}
       />
     </>

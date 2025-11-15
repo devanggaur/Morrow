@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import SavingsMethodCard from "./SavingsMethodCard";
 import {
   TrendingUp,
@@ -9,9 +10,59 @@ import {
   Heart,
   PartyPopper,
   Ticket,
+  Loader2,
 } from "lucide-react";
+import { useAppContext } from "@/contexts/AppContext";
+import { usePlaidTransactions } from "@/hooks/useAPI";
+import { savingsAPI } from "@/lib/api";
 
 export default function SavingsLabTab() {
+  const [savingsAnalysis, setSavingsAnalysis] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { plaidAccessToken } = useAppContext();
+
+  // Fetch transactions
+  const endDate = new Date().toISOString().split("T")[0];
+  const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+  const { data: transactionsData } = usePlaidTransactions(
+    plaidAccessToken,
+    startDate,
+    endDate
+  );
+
+  // Analyze savings opportunities
+  useEffect(() => {
+    if (transactionsData?.transactions) {
+      setIsLoading(true);
+      savingsAPI
+        .analyzeAll(transactionsData.transactions)
+        .then((data) => {
+          if (data.success) {
+            setSavingsAnalysis(data.opportunities);
+          }
+        })
+        .catch((error) => {
+          console.error("Error analyzing savings:", error);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [transactionsData]);
+
+  const windfallExample = savingsAnalysis?.windfall?.hasWindfall
+    ? `${savingsAnalysis.windfall.suggestion.title}: $${Math.abs(
+        savingsAnalysis.windfall.suggestion.transaction.amount
+      ).toLocaleString()} → save $${savingsAnalysis.windfall.suggestion.amount}?`
+    : "Tax refund: $1,800 → save $360?";
+
+  const sweepExample = savingsAnalysis?.sweep?.hasSweep
+    ? `${savingsAnalysis.sweep.suggestion.title} → save $${savingsAnalysis.sweep.suggestion.amount}?`
+    : "You spent $80 less → save $40?";
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="p-6">
@@ -20,24 +71,33 @@ export default function SavingsLabTab() {
           Your personalized savings toolkit. Mix and match to fit your style.
         </p>
 
+        {isLoading && (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
+
         <div className="space-y-4">
           <SavingsMethodCard
             icon={<TrendingUp className="w-6 h-6 text-primary" />}
             title="Windfall Wallet"
             description="Save a percentage when large deposits hit"
-            example="Tax refund: $1,800 → save $360?"
+            example={windfallExample}
             hasToggle={true}
             hasSlider={true}
-            badge="Popular"
+            badge={
+              savingsAnalysis?.windfall?.hasWindfall ? "Opportunity!" : "Popular"
+            }
           />
 
           <SavingsMethodCard
             icon={<TrendingDown className="w-6 h-6 text-primary" />}
             title="Smart Sweep"
             description="Weekly underspend detection with auto-save"
-            example="You spent $80 less → save $40?"
+            example={sweepExample}
             hasToggle={true}
             hasSlider={true}
+            badge={savingsAnalysis?.sweep?.hasSweep ? "Opportunity!" : undefined}
           />
 
           <SavingsMethodCard

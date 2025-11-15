@@ -160,6 +160,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get All Accounts for Entity
+  app.get("/api/increase/accounts/:entityId", async (req, res) => {
+    try {
+      const { entityId } = req.params;
+      const result = await increaseClient.getAccountsByEntity(entityId);
+
+      if (result.success) {
+        res.json({ success: true, accounts: result.accounts });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Create Account (Main or Vault)
   app.post("/api/increase/account", async (req, res) => {
     try {

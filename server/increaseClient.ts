@@ -189,6 +189,37 @@ export async function getAccountTransfers(accountId: string, limit: number = 50)
   }
 }
 
+export async function getAccountsByEntity(entityId: string) {
+  try {
+    const response = await increaseApi.get('/accounts', {
+      params: {
+        entity_id: entityId,
+        limit: 100,
+      },
+    });
+
+    return {
+      success: true,
+      accounts: response.data.data.map((account: any) => ({
+        account_id: account.id,
+        entity_id: account.entity_id,
+        name: account.name,
+        status: account.status,
+        current_balance: account.balance / 100, // Convert from cents to dollars
+        currency: account.currency,
+        created_at: account.created_at,
+      })),
+    };
+  } catch (error: any) {
+    console.error('Error getting accounts by entity:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.detail || error.message,
+      accounts: [],
+    };
+  }
+}
+
 export async function simulateInboundACH(accountId: string, amount: number, description: string) {
   try {
     // This is for sandbox testing only

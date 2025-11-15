@@ -2,12 +2,83 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { useState } from "react";
-import { TrendingUp, Vault, FlaskConical, Gift } from "lucide-react";
+import { useState, useEffect } from "react";
+import { TrendingUp, Vault, FlaskConical, Gift, Loader2 } from "lucide-react";
 import { Link } from "wouter";
+import { useAppContext } from "@/contexts/AppContext";
+import {
+  usePlaidAccounts,
+  usePlaidTransactions,
+  useIncreaseAccounts,
+  useIncreaseBalance,
+} from "@/hooks/useAPI";
+import { savingsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function HomeTab() {
   const [saveAmount, setSaveAmount] = useState([180]);
+  const [windfallData, setWindfallData] = useState<any>(null);
+  const [isLoadingWindfall, setIsLoadingWindfall] = useState(false);
+
+  const { toast } = useToast();
+  const { plaidAccessToken, increaseEntityId, increaseMainAccountId } =
+    useAppContext();
+
+  // Fetch Plaid accounts
+  const { data: plaidAccountsData } = usePlaidAccounts(plaidAccessToken);
+
+  // Fetch Plaid transactions for windfall detection
+  const endDate = new Date().toISOString().split("T")[0];
+  const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+  const { data: transactionsData } = usePlaidTransactions(
+    plaidAccessToken,
+    startDate,
+    endDate
+  );
+
+  // Fetch Increase accounts for vault balances
+  const { data: increaseAccountsData } = useIncreaseAccounts(increaseEntityId);
+
+  // Fetch main account balance
+  const { data: mainBalanceData } = useIncreaseBalance(increaseMainAccountId);
+
+  // Calculate total checking balance from Plaid
+  const checkingBalance =
+    plaidAccountsData?.accounts
+      ?.filter((acc: any) => acc.type === "depository")
+      .reduce((sum: number, acc: any) => sum + (acc.balances?.current || 0), 0) || 0;
+
+  // Calculate total vault balance
+  const vaultBalance =
+    increaseAccountsData?.accounts?.reduce(
+      (sum: number, acc: any) => sum + (acc.current_balance || 0),
+      0
+    ) || 0;
+
+  const vaultCount = increaseAccountsData?.accounts?.length || 0;
+
+  // Detect windfall when transactions are loaded
+  useEffect(() => {
+    if (transactionsData?.transactions) {
+      setIsLoadingWindfall(true);
+      savingsAPI
+        .detectWindfall(transactionsData.transactions)
+        .then((data) => {
+          if (data.hasWindfall && data.suggestion) {
+            setWindfallData(data);
+            setSaveAmount([data.suggestion.amount]);
+          }
+        })
+        .catch((error) => {
+          console.error("Error detecting windfall:", error);
+        })
+        .finally(() => {
+          setIsLoadingWindfall(false);
+        });
+    }
+  }, [transactionsData]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -17,11 +88,15 @@ export default function HomeTab() {
         <div className="grid grid-cols-2 gap-3 mb-6">
           <Card className="p-5">
             <p className="text-sm text-muted-foreground mb-1">Cash in checking</p>
-            <p className="text-2xl font-bold">$1,247</p>
+            <p className="text-2xl font-bold">
+              ${checkingBalance.toLocaleString()}
+            </p>
           </Card>
           <Card className="p-5">
             <p className="text-sm text-muted-foreground mb-1">Saved in vaults</p>
-            <p className="text-2xl font-bold text-primary">$3,840</p>
+            <p className="text-2xl font-bold text-primary">
+              ${vaultBalance.toLocaleString()}
+            </p>
           </Card>
         </div>
 
@@ -48,66 +123,95 @@ export default function HomeTab() {
           </Link>
         </div>
 
-        <Card className="p-6 mb-6">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-6 h-6 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold mb-1">Your best move today</h2>
-              <Badge variant="outline" className="text-xs">
-                Windfall Detected
-              </Badge>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-muted-foreground mb-4">
-              Tax refund hit: <span className="font-semibold text-foreground">$1,800</span>
-            </p>
-            <div className="bg-muted/50 rounded-xl p-4 mb-4">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Save</span>
-                <span className="text-lg font-bold text-primary">${saveAmount[0]}</span>
+        {windfallData?.hasWindfall && (
+          <Card className="p-6 mb-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-6 h-6 text-primary" />
               </div>
-              <Slider
-                value={saveAmount}
-                onValueChange={setSaveAmount}
-                max={900}
-                min={0}
-                step={10}
-                className="mb-2"
-                data-testid="slider-save-amount"
-              />
-              <p className="text-xs text-muted-foreground text-center">
-                10% of your windfall
-              </p>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold mb-1">Your best move today</h2>
+                <Badge variant="outline" className="text-xs">
+                  Windfall Detected
+                </Badge>
+              </div>
             </div>
-          </div>
 
-          <div className="flex gap-3">
-            <Button
-              data-testid="button-do-it"
-              className="flex-1 rounded-full font-semibold"
-            >
-              Do it
-            </Button>
-            <Button
-              data-testid="button-adjust"
-              variant="outline"
-              className="rounded-full font-semibold px-6"
-            >
-              Adjust
-            </Button>
-            <Button
-              data-testid="button-skip"
-              variant="ghost"
-              className="rounded-full font-semibold px-6"
-            >
-              Skip
-            </Button>
-          </div>
-        </Card>
+            <div className="mb-4">
+              <p className="text-muted-foreground mb-4">
+                {windfallData.suggestion.title}:{" "}
+                <span className="font-semibold text-foreground">
+                  ${windfallData.suggestion.transaction.amount.toLocaleString()}
+                </span>
+              </p>
+              <div className="bg-muted/50 rounded-xl p-4 mb-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">Save</span>
+                  <span className="text-lg font-bold text-primary">
+                    ${saveAmount[0]}
+                  </span>
+                </div>
+                <Slider
+                  value={saveAmount}
+                  onValueChange={setSaveAmount}
+                  max={
+                    Math.floor(
+                      windfallData.suggestion.transaction.amount * 0.5
+                    )
+                  }
+                  min={0}
+                  step={10}
+                  className="mb-2"
+                  data-testid="slider-save-amount"
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  {Math.round(
+                    (saveAmount[0] /
+                      windfallData.suggestion.transaction.amount) *
+                      100
+                  )}
+                  % of your windfall
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                data-testid="button-do-it"
+                className="flex-1 rounded-full font-semibold"
+                onClick={() => {
+                  toast({
+                    title: "Savings scheduled!",
+                    description: `$${saveAmount[0]} will be transferred to your vault.`,
+                  });
+                }}
+              >
+                Do it
+              </Button>
+              <Button
+                data-testid="button-adjust"
+                variant="outline"
+                className="rounded-full font-semibold px-6"
+              >
+                Adjust
+              </Button>
+              <Button
+                data-testid="button-skip"
+                variant="ghost"
+                className="rounded-full font-semibold px-6"
+                onClick={() => setWindfallData(null)}
+              >
+                Skip
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {isLoadingWindfall && (
+          <Card className="p-6 mb-6 flex justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </Card>
+        )}
 
         <Link href="/vaults">
           <Card className="p-5 hover-elevate cursor-pointer">
@@ -116,7 +220,9 @@ export default function HomeTab() {
                 <Vault className="w-5 h-5 text-primary" />
                 <span className="font-semibold">View all vaults</span>
               </div>
-              <span className="text-sm text-muted-foreground">3 active</span>
+              <span className="text-sm text-muted-foreground">
+                {vaultCount} active
+              </span>
             </div>
           </Card>
         </Link>

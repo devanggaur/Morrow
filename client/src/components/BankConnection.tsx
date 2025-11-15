@@ -4,7 +4,7 @@ import { usePlaidLink } from "react-plaid-link";
 import { usePlaidLinkToken } from "@/hooks/useAPI";
 import { plaidAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useAppContext } from "@/contexts/AppContext";
 
 interface BankConnectionProps {
   onConnect?: (accessToken: string, itemId: string) => void;
@@ -13,7 +13,7 @@ interface BankConnectionProps {
 
 export default function BankConnection({ onConnect, onSkip }: BankConnectionProps) {
   const { toast } = useToast();
-  const [userId] = useState(() => `user_${Date.now()}`);
+  const { userId, setPlaidAccessToken, setPlaidItemId } = useAppContext();
 
   // Get link token from backend
   const { data: linkTokenData, isLoading: isLoadingToken } = usePlaidLinkToken(userId);
@@ -23,6 +23,10 @@ export default function BankConnection({ onConnect, onSkip }: BankConnectionProp
     try {
       // Exchange public token for access token
       const result = await plaidAPI.exchangePublicToken(publicToken, userId);
+
+      // Save to app context
+      setPlaidAccessToken(result.access_token);
+      setPlaidItemId(result.item_id);
 
       toast({
         title: "Bank connected!",
