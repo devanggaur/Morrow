@@ -115,10 +115,27 @@ export async function getAccountBalance(accountId: string) {
   try {
     const response = await increaseApi.get(`/accounts/${accountId}`);
 
+    let calculatedBalance = 0;
+
+    // If balance is null (common in sandbox), calculate from transactions
+    if (response.data.balance === null) {
+      try {
+        const txResponse = await increaseApi.get('/transactions', {
+          params: { account_id: accountId, limit: 100 },
+        });
+
+        calculatedBalance = txResponse.data.data.reduce((sum: number, tx: any) => {
+          return sum + (tx.amount || 0);
+        }, 0);
+      } catch (txError) {
+        console.warn(`Could not fetch transactions for account ${accountId}:`, txError);
+      }
+    }
+
     return {
       success: true,
       account_id: accountId,
-      current_balance: response.data.balance / 100, // Convert from cents to dollars
+      current_balance: response.data.balance !== null ? response.data.balance / 100 : calculatedBalance / 100,
       currency: response.data.currency,
     };
   } catch (error: any) {
