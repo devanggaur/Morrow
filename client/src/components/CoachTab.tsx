@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Send, Loader2 } from "lucide-react";
 import { useChatWithCoach } from "@/hooks/useAPI";
+import { useAppContext } from "@/contexts/AppContext";
 
 const suggestions = [
   "How much can I save today?",
@@ -18,6 +19,7 @@ interface Message {
 }
 
 export default function CoachTab() {
+  const { userId, plaidAccessToken, increaseMainAccountId } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -43,8 +45,13 @@ export default function CoachTab() {
     setInput("");
 
     try {
-      // Call the AI coach API
-      const response = await chatMutation.mutateAsync(newMessages);
+      // Call the AI coach API with financial context
+      const response = await chatMutation.mutateAsync({
+        messages: newMessages,
+        userId,
+        plaidAccessToken,
+        increaseMainAccountId,
+      });
 
       setMessages((prev) => [
         ...prev,

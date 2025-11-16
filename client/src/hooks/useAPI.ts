@@ -141,6 +141,42 @@ export function useLocusDonate() {
   });
 }
 
+export function useLocusTransactions(userId: string = 'default_user') {
+  return useQuery({
+    queryKey: ['locus-transactions', userId],
+    queryFn: () => locusAPI.getWalletTransactions(userId),
+    refetchInterval: 15000, // Refetch every 15 seconds
+  });
+}
+
+export function useLocusGiftCards() {
+  return useQuery({
+    queryKey: ['locus-gift-cards'],
+    queryFn: () => locusAPI.getGiftCards(),
+    staleTime: Infinity, // Gift cards don't change often
+  });
+}
+
+export function useLocusRedeemGiftCard() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      giftCardId,
+      amount,
+    }: {
+      userId: string;
+      giftCardId: string;
+      amount: number;
+    }) => locusAPI.redeemGiftCard(userId, giftCardId, amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locus-wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['locus-transactions'] });
+    },
+  });
+}
+
 // ============ Savings Agent Hooks ============
 
 export function useSavingsAnalysis(transactions: any[] | null) {
@@ -163,7 +199,17 @@ export function useFreshStart(userId: string = 'default_user') {
 
 export function useChatWithCoach() {
   return useMutation({
-    mutationFn: (messages: Array<{ role: string; content: string }>) =>
-      coachAPI.chat(messages),
+    mutationFn: (params: {
+      messages: Array<{ role: string; content: string }>;
+      userId?: string;
+      plaidAccessToken?: string | null;
+      increaseMainAccountId?: string | null;
+    }) =>
+      coachAPI.chat(
+        params.messages,
+        params.userId,
+        params.plaidAccessToken,
+        params.increaseMainAccountId
+      ),
   });
 }

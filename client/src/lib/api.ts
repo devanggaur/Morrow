@@ -194,6 +194,51 @@ export const locusAPI = {
       }
     );
   },
+
+  // Agent distributes USDC reward
+  distributeReward: async (
+    userId: string,
+    savingsAmount: number,
+    rewardType: 'windfall' | 'sweep' | 'roundup',
+    description: string
+  ) => {
+    return fetchAPI<{
+      success: boolean;
+      transaction_id: string;
+      reward_amount: number;
+      new_balance: number;
+      transaction: any;
+    }>('/locus/reward/distribute', {
+      method: 'POST',
+      body: JSON.stringify({ userId, savingsAmount, rewardType, description }),
+    });
+  },
+
+  // Get wallet transaction history
+  getWalletTransactions: async (userId: string = 'default_user', limit: number = 50) => {
+    return fetchAPI<{ success: boolean; transactions: any[] }>(
+      `/locus/wallet/transactions?userId=${userId}&limit=${limit}`
+    );
+  },
+
+  // Get gift cards catalog
+  getGiftCards: async () => {
+    return fetchAPI<{ success: boolean; giftCards: any[] }>('/locus/gift-cards');
+  },
+
+  // Redeem gift card
+  redeemGiftCard: async (userId: string, giftCardId: string, amount: number) => {
+    return fetchAPI<{
+      success: boolean;
+      transaction_id: string;
+      gift_card_code: string;
+      new_balance: number;
+      transaction: any;
+    }>('/locus/gift-cards/redeem', {
+      method: 'POST',
+      body: JSON.stringify({ userId, giftCardId, amount }),
+    });
+  },
 };
 
 // ============ Savings Agent API ============
@@ -248,10 +293,20 @@ export const savingsAPI = {
 // ============ AI Coach API ============
 
 export const coachAPI = {
-  chat: async (messages: Array<{ role: string; content: string }>) => {
+  chat: async (
+    messages: Array<{ role: string; content: string }>,
+    userId?: string,
+    plaidAccessToken?: string | null,
+    increaseMainAccountId?: string | null
+  ) => {
     return fetchAPI<{ success: boolean; message: string }>('/coach/chat', {
       method: 'POST',
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({
+        messages,
+        userId,
+        plaidAccessToken,
+        increaseMainAccountId,
+      }),
     });
   },
 };
