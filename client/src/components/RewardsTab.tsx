@@ -11,53 +11,64 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Ticket, PartyPopper, TrendingUp, Trophy, Repeat, Zap, Heart, Loader2 } from "lucide-react";
+import { Ticket, PartyPopper, TrendingUp, Trophy, Repeat, Zap, Heart, Loader2, Coins, Gift, Check } from "lucide-react";
 import { useAppContext } from "@/contexts/AppContext";
-import { useLocusWallet, useLocusCharities, useLocusDonate } from "@/hooks/useAPI";
+import { useLocusWallet, useLocusCharities, useLocusDonate, useLocusTransactions, useLocusGiftCards, useLocusRedeemGiftCard } from "@/hooks/useAPI";
 import { useToast } from "@/hooks/use-toast";
 
-const activityFeed = [
-  {
-    icon: <TrendingUp className="w-5 h-5 text-primary" />,
-    action: "Saved $40 with Smart Sweep",
-    reward: "earned 2 entries",
-    time: "2 hours ago",
-  },
-  {
-    icon: <Trophy className="w-5 h-5 text-primary" />,
-    action: "Completed Coffee Swap challenge",
-    reward: "unlocked $5 fun wallet credit",
-    time: "Yesterday",
-  },
-  {
-    icon: <Repeat className="w-5 h-5 text-primary" />,
-    action: "Round-ups accumulated $12",
-    reward: "earned 1 entry",
-    time: "2 days ago",
-  },
-  {
-    icon: <Zap className="w-5 h-5 text-primary" />,
-    action: "Windfall save: $180",
-    reward: "earned 9 entries",
-    time: "1 week ago",
-  },
-];
+// Helper to format timestamp
+function formatTimeAgo(timestamp: string) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return "Just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+  return `${Math.floor(seconds / 604800)} weeks ago`;
+}
+
+// Helper to get icon for reward type
+function getRewardIcon(type: string) {
+  switch (type) {
+    case 'windfall':
+      return <Zap className="w-5 h-5 text-primary" />;
+    case 'sweep':
+      return <TrendingUp className="w-5 h-5 text-primary" />;
+    case 'roundup':
+      return <Repeat className="w-5 h-5 text-primary" />;
+    case 'redemption':
+      return <Gift className="w-5 h-5 text-destructive" />;
+    default:
+      return <Coins className="w-5 h-5 text-primary" />;
+  }
+}
 
 export default function RewardsTab() {
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [selectedCharity, setSelectedCharity] = useState<any>(null);
   const [donateAmount, setDonateAmount] = useState("");
 
+  const [showGiftCardDialog, setShowGiftCardDialog] = useState(false);
+  const [selectedGiftCard, setSelectedGiftCard] = useState<any>(null);
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+
   const { toast } = useToast();
   const { userId } = useAppContext();
 
   const { data: walletData, isLoading: isLoadingWallet } = useLocusWallet(userId);
   const { data: charitiesData, isLoading: isLoadingCharities } = useLocusCharities();
+  const { data: transactionsData, isLoading: isLoadingTransactions } = useLocusTransactions(userId);
+  const { data: giftCardsData, isLoading: isLoadingGiftCards } = useLocusGiftCards();
   const donateMutation = useLocusDonate();
+  const redeemGiftCardMutation = useLocusRedeemGiftCard();
 
   const walletBalance = walletData?.balance ?? 0;
   const totalRewards = walletData?.totalRewards ?? 0;
   const charities = charitiesData?.charities ?? [];
+  const transactions = transactionsData?.transactions ?? [];
+  const giftCards = giftCardsData?.giftCards ?? [];
 
   const handleDonate = async () => {
     if (!donateAmount || !selectedCharity) return;
@@ -85,6 +96,34 @@ export default function RewardsTab() {
       });
     }
   };
+
+  const handleRedeemGiftCard = async () => {
+    if (!selectedGiftCard || !selectedAmount) return;
+
+    try {
+      const result = await redeemGiftCardMutation.mutateAsync({
+        userId,
+        giftCardId: selectedGiftCard.id,
+        amount: selectedAmount,
+      });
+
+      toast({
+        title: "Gift Card Redeemed!",
+        description: `Your ${selectedGiftCard.brand} $${selectedAmount} gift card code: ${result.gift_card_code}`,
+        duration: 10000, // Show longer so user can copy code
+      });
+
+      setShowGiftCardDialog(false);
+      setSelectedGiftCard(null);
+      setSelectedAmount(null);
+    } catch (error) {
+      toast({
+        title: "Redemption failed",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
   return (
     <>
       <div className="min-h-screen bg-background pb-20">
@@ -94,12 +133,12 @@ export default function RewardsTab() {
           <Card className="p-6 mb-6 bg-gradient-to-br from-primary/10 to-primary/5">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center">
-                <PartyPopper className="w-6 h-6 text-primary-foreground" />
+                <Coins className="w-6 h-6 text-primary-foreground" />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold mb-1">Fun Money Wallet</h2>
+                <h2 className="text-xl font-bold mb-1">USDC Rewards Wallet</h2>
                 <p className="text-sm text-muted-foreground">
-                  Guilt-free spending from your savings wins
+                  Crypto rewards powered by Locus
                 </p>
               </div>
             </div>
@@ -109,10 +148,10 @@ export default function RewardsTab() {
               ) : (
                 <>
                   <p className="text-4xl font-bold text-primary mb-1">
-                    ${walletBalance.toFixed(2)}
+                    ${walletBalance.toFixed(2)} USDC
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Available to spend • ${totalRewards.toFixed(2)} total rewards
+                    Available balance • ${totalRewards.toFixed(2)} earned from savings
                   </p>
                 </>
               )}
@@ -120,9 +159,12 @@ export default function RewardsTab() {
             <div className="grid grid-cols-2 gap-3 mt-4">
               <Button
                 data-testid="button-spend-fun-money"
-                className="rounded-full"
+                className="rounded-full gap-2"
+                onClick={() => setShowGiftCardDialog(true)}
+                disabled={walletBalance === 0}
               >
-                Unlock to checking
+                <Gift className="w-4 h-4" />
+                Redeem
               </Button>
               <Button
                 variant="outline"
@@ -180,25 +222,50 @@ export default function RewardsTab() {
           </Card>
 
           <div>
-            <h2 className="text-xl font-bold mb-4">Activity</h2>
-            <div className="space-y-3">
-              {activityFeed.map((item, i) => (
-                <Card key={i} className="p-4">
-                  <div className="flex gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      {item.icon}
+            <h2 className="text-xl font-bold mb-4">USDC Reward History</h2>
+            {isLoadingTransactions ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : transactions.length === 0 ? (
+              <Card className="p-6 text-center">
+                <Coins className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                <p className="text-sm text-muted-foreground mb-1">
+                  No rewards yet
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Start saving to earn USDC rewards!
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {transactions.map((tx: any) => (
+                  <Card key={tx.id} className="p-4">
+                    <div className="flex gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        {getRewardIcon(tx.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm mb-1">{tx.description}</p>
+                        <p className="text-xs text-primary font-semibold mb-1">
+                          {tx.amount >= 0 ? '+' : ''}${tx.amount.toFixed(2)} USDC {tx.type === 'redemption' ? 'spent' : 'reward'}
+                          {tx.savingsAmount && ` • Saved $${tx.savingsAmount.toFixed(2)}`}
+                          {tx.giftCard && ` • ${tx.giftCard.brand} $${tx.giftCard.amount}`}
+                        </p>
+                        {tx.transaction_hash && (
+                          <p className="text-xs text-muted-foreground mb-1 font-mono break-all">
+                            ⛓️ TX: {tx.transaction_hash.substring(0, 16)}...
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {formatTimeAgo(tx.timestamp)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm mb-1">{item.action}</p>
-                      <p className="text-xs text-primary font-semibold mb-1">
-                        {item.reward}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{item.time}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -285,6 +352,109 @@ export default function RewardsTab() {
                 </>
               ) : (
                 "Donate"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showGiftCardDialog} onOpenChange={setShowGiftCardDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Redeem Gift Card</DialogTitle>
+            <DialogDescription>
+              Use your USDC rewards to get gift cards from popular brands
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            {isLoadingGiftCards ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {giftCards.map((gc: any) => (
+                  <Card
+                    key={gc.id}
+                    className={`p-4 cursor-pointer transition-all ${
+                      selectedGiftCard?.id === gc.id
+                        ? 'border-primary border-2 bg-primary/5'
+                        : 'hover:border-primary/50'
+                    }`}
+                    onClick={() => {
+                      setSelectedGiftCard(gc);
+                      setSelectedAmount(null); // Reset amount when changing card
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-3xl">{gc.image}</div>
+                      <div className="flex-1">
+                        <p className="font-semibold">{gc.brand}</p>
+                        <p className="text-xs text-muted-foreground">{gc.description}</p>
+                      </div>
+                      {selectedGiftCard?.id === gc.id && (
+                        <Check className="w-5 h-5 text-primary" />
+                      )}
+                    </div>
+
+                    {selectedGiftCard?.id === gc.id && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-sm font-medium mb-2">Select amount:</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {gc.denominations.map((amount: number) => (
+                            <Button
+                              key={amount}
+                              variant={selectedAmount === amount ? 'default' : 'outline'}
+                              size="sm"
+                              className="h-auto py-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedAmount(amount);
+                              }}
+                              disabled={amount > walletBalance}
+                            >
+                              ${amount}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowGiftCardDialog(false);
+                setSelectedGiftCard(null);
+                setSelectedAmount(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleRedeemGiftCard}
+              disabled={
+                !selectedGiftCard ||
+                !selectedAmount ||
+                redeemGiftCardMutation.isPending ||
+                selectedAmount > walletBalance
+              }
+            >
+              {redeemGiftCardMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Redeeming...
+                </>
+              ) : (
+                "Redeem"
               )}
             </Button>
           </div>

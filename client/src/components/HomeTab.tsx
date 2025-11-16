@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { TrendingUp, Vault, FlaskConical, Gift, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { useAppContext } from "@/contexts/AppContext";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   usePlaidAccounts,
   usePlaidTransactions,
@@ -13,7 +14,7 @@ import {
   useIncreaseBalance,
   useIncreaseTransfer,
 } from "@/hooks/useAPI";
-import { savingsAPI } from "@/lib/api";
+import { savingsAPI, locusAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 export default function HomeTab() {
@@ -31,7 +32,8 @@ export default function HomeTab() {
   const [roundupClaimed, setRoundupClaimed] = useState(false);
 
   const { toast } = useToast();
-  const { plaidAccessToken, increaseEntityId, increaseMainAccountId } =
+  const queryClient = useQueryClient();
+  const { userId, plaidAccessToken, increaseEntityId, increaseMainAccountId } =
     useAppContext();
   const transferMutation = useIncreaseTransfer();
 
@@ -70,7 +72,7 @@ export default function HomeTab() {
 
   const vaultCount = increaseAccountsData?.accounts?.length || 0;
 
-  // Handler for "Do it" button - transfer savings to first vault
+  // Handler for "Do it" button - transfer savings AND earn USDC rewards
   const handleClaimSavings = async (type: 'windfall' | 'sweep' | 'roundup', amount: number, description: string) => {
     const firstVault = increaseAccountsData?.accounts?.[0];
 
@@ -84,6 +86,7 @@ export default function HomeTab() {
     }
 
     try {
+      // Step 1: Transfer money to vault (Increase)
       await transferMutation.mutateAsync({
         fromAccountId: increaseMainAccountId,
         toAccountId: firstVault.account_id,
@@ -91,18 +94,31 @@ export default function HomeTab() {
         description,
       });
 
+      // Step 2: Agent distributes USDC reward via Locus (autonomous payment!)
+      const rewardResult = await locusAPI.distributeReward(
+        userId,
+        amount,
+        type,
+        `Reward for ${type} savings of $${amount}`
+      );
+
+      // Invalidate Locus queries to update Rewards tab in real-time
+      queryClient.invalidateQueries({ queryKey: ['locus-wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['locus-transactions'] });
+
       if (type === 'windfall') setWindfallClaimed(true);
       if (type === 'sweep') setSweepClaimed(true);
       if (type === 'roundup') setRoundupClaimed(true);
 
       toast({
-        title: "Savings transferred!",
-        description: `$${amount} moved to ${firstVault.name}. Great job!`,
+        title: "🎉 Savings + Crypto Earned!",
+        description: `$${amount.toFixed(2)} saved to ${firstVault.name} + $${rewardResult?.reward_amount?.toFixed(2) || '0.00'} USDC earned!`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Savings claim error:', error);
       toast({
         title: "Transfer failed",
-        description: "Please try again later.",
+        description: error?.message || "Please try again later.",
         variant: "destructive",
       });
     }
